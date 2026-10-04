@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f2a44">
+<title>מד רעידות כיתתי</title>
+<style>
+  :root{
+    --bg:#f3f1ec; --card:#ffffff; --ink:#1f2a44; --muted:#6b7385; --line:#e3e0d8;
+    --fr:#e8590c; --fr-soft:#fff0e6; --nf:#1c7ed6; --nf-soft:#e7f2fd;
+    --ok:#2f9e44; --warn:#f08c00; --bad:#e03131;
+    --water:#4dabf7; --water-deep:#1c7ed6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Rubik","Assistant","Segoe UI",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+  body{padding:16px;padding-bottom:40px;max-width:1100px;margin:0 auto}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  header .logo{font-size:40px;line-height:1}
+  header h1{margin:0;font-size:26px}
+  header p{margin:2px 0 0;color:var(--muted);font-size:15px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  h2{margin:0 0 12px;font-size:20px}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:14px;font-size:18px;font-weight:600;
+    padding:14px 18px;touch-action:manipulation}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .primary{background:var(--ink);color:#fff;font-size:22px;padding:18px 28px;width:100%}
+  .ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+  .link{background:none;color:var(--muted);text-decoration:underline;font-size:15px;padding:8px}
+  ol.steps{margin:0 0 16px;padding-inline-start:22px;line-height:1.8;font-size:17px}
+  .note{background:#fff8db;border:1px solid #ffe066;border-radius:12px;padding:10px 14px;font-size:15px;margin:12px 0}
+  .err{background:#fff0f0;border-color:#ffc9c9}
+
+  /* live */
+  .live-top{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+  .meter .label{color:var(--muted);font-size:16px}
+  .meter .big{font-size:64px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.05;direction:ltr;text-align:right}
+  .meter .unit{color:var(--muted);font-size:15px}
+  .meter .level{display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;font-weight:600;font-size:16px;background:#eef6ee;color:var(--ok)}
+  .bar{height:14px;background:#eceae4;border-radius:999px;overflow:hidden;margin-top:10px}
+  .bar>div{height:100%;width:0;border-radius:999px;background:var(--ok);transition:width .08s linear}
+  #beaker{width:150px;height:170px}
+  canvas{width:100%;display:block}
+  #liveChart{height:190px;margin-top:12px}
+  .status{color:var(--muted);font-size:14px;margin-top:6px;min-height:1.2em}
+
+  /* record */
+  .rec-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .rec{color:#fff;padding:18px 12px;font-size:21px;line-height:1.3}
+  .rec small{display:block;font-weight:400;font-size:14px;opacity:.9;margin-top:2px}
+  .rec.fr{background:var(--fr)} .rec.nf{background:var(--nf)}
+  #recBanner{margin-top:14px;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:20px;font-weight:600}
+  #recBanner.fr{background:var(--fr-soft);color:var(--fr)} #recBanner.nf{background:var(--nf-soft);color:var(--nf)}
+  #recBanner .dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:currentColor;margin-inline-end:8px;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.2}}
+  #stopBtn{background:var(--ink);color:#fff;padding:12px 22px}
+  .countdown{font-size:42px;font-weight:700}
+  .run-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .run-head h3{margin:0;font-size:18px}
+  #runInfo{color:var(--muted);font-size:15px}
+  #runChart{height:230px;margin-top:6px}
+
+  /* results */
+  .results{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .res{border-top:6px solid var(--line)}
+  .res.fr{border-top-color:var(--fr)} .res.nf{border-top-color:var(--nf)}
+  .res h3{margin:0 0 8px;font-size:18px}
+  .res.fr h3{color:var(--fr)} .res.nf h3{color:var(--nf)}
+  .res .empty{color:var(--muted);font-size:15px;padding:24px 0;text-align:center}
+  .res canvas{height:110px;margin-bottom:8px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{background:#f7f6f2;border-radius:12px;padding:8px;text-align:center}
+  .stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+  .stat span{font-size:12.5px;color:var(--muted)}
+
+  /* compare */
+  #compareChart{height:220px}
+  .legend{display:flex;gap:18px;font-size:15px;margin:8px 0 4px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-inline-end:6px;vertical-align:-2px}
+  .bars{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+  .bargroup h4{margin:0 0 6px;font-size:15px;color:var(--muted);font-weight:600}
+  .hbar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:15px}
+  .hbar .track{flex:1;height:22px;background:#f1efe9;border-radius:8px;overflow:hidden}
+  .hbar .fill{height:100%;border-radius:8px;transition:width .4s}
+  .hbar .v{min-width:52px;text-align:left;font-variant-numeric:tabular-nums;direction:ltr}
+  .conclusion{margin-top:14px;font-size:18px;font-weight:600;background:#f7f6f2;border-radius:12px;padding:12px 14px}
+  .questions{margin:14px 0 0;padding-inline-start:22px;line-height:1.8;font-size:16px}
+
+  /* settings */
+  details summary{cursor:pointer;font-size:18px;font-weight:600}
+  .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .row label{font-size:16px}
+  input[type=range]{flex:1;min-width:160px;accent-color:var(--ink)}
+  .demo-badge{display:none;background:#7048e8;color:#fff;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;margin-inline-start:8px;vertical-align:middle}
+  body.demo .demo-badge{display:inline-block}
+
+  @media (max-width:640px){
+    .results,.bars{grid-template-columns:1fr}
+    .meter .big{font-size:48px}
+    #beaker{width:110px;height:125px}
+    .rec{font-size:18px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌍</div>
+  <div>
+    <h1>מד רעידות כיתתי <span class="demo-badge">מצב הדגמה</span></h1>
+    <p>מודדים את התאוצה של המשטח: היתקעות והחלקה</p>
+  </div>
+</header>
+
+<!-- ===== Start screen ===== -->
+<section id="startScreen" class="card">
+  <h2>לפני שמתחילים</h2>
+  <ol class="steps">
+    <li>הניחו את הטאבלט <b>שטוח</b> על המשטח, ליד המשורה עם המים.</li>
+    <li>לחצו על <b>"התחל מדידה"</b> ואל תזיזו את הטאבלט עד שהכיול יסתיים.</li>
+    <li>בחרו ניסוי (<b>עם חיכוך</b> או <b>בלי חיכוך</b>). בזמן הספירה לאחור הרחיקו את הידיים מהטאבלט.</li>
+    <li>משכו את הקפיץ לאט וברציפות, ועקבו אחרי הגרף ואחרי המים.</li>
+  </ol>
+  <button id="startBtn" class="primary">▶ התחל מדידה</button>
+  <div id="startMsg" class="note err" hidden></div>
+  <div style="text-align:center"><button id="demoBtn" class="link">אין חיישן? אפשר לנסות במצב הדגמה (נתונים מדומים)</button></div>
+</section>
+
+<!-- ===== App ===== -->
+<main id="app" hidden>
+
+  <section class="card">
+    <div class="live-top">
+      <div class="meter">
+        <div class="label">תאוצת המשטח עכשיו</div>
+        <div class="big" id="nowVal">0.00</div>
+        <div class="unit">מטר לשנייה בריבוע (m/s²)</div>
+        <div class="level" id="nowLevel">שקט</div>
+        <div class="bar"><div id="nowBar"></div></div>
+      </div>
+      <svg id="beaker" viewBox="0 0 140 160" aria-label="משורה עם מים">
+        <defs>
+          <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#74c0fc"/><stop offset="1" stop-color="#1c7ed6"/>
+          </linearGradient>
+          <clipPath id="inner"><rect x="22" y="14" width="96" height="134" rx="6"/></clipPath>
+        </defs>
+        <g id="beakerG">
+          <path id="water" clip-path="url(#inner)" fill="url(#wg)" opacity=".9"/>
+          <rect x="20" y="10" width="100" height="140" rx="8" fill="none" stroke="#9aa3b5" stroke-width="4"/>
+          <g stroke="#9aa3b5" stroke-width="2">
+            <line x1="20" y1="45" x2="34" y2="45"/><line x1="20" y1="80" x2="34" y2="80"/><line x1="20" y1="115" x2="34" y2="115"/>
+          </g>
+        </g>
+        <rect x="6" y="152" width="128" height="6" rx="3" fill="#c9c4b8"/>
+      </svg>
+    </div>
+    <canvas id="liveChart"></canvas>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="card">
+    <h2>הקלטת ניסוי</h2>
+    <div class="rec-buttons">
+      <button class="rec fr" data-mode="fr">עם חיכוך<small>נייר שיוף מול נייר שיוף</small></button>
+      <button class="rec nf" data-mode="nf">בלי חיכוך<small>הבלוק והמשטח הפוכים, הצד החלק</small></button>
+    </div>
+    <div id="recBanner" hidden></div>
+    <div class="run-head">
+      <h3>מהלך המדידה</h3>
+      <span id="runInfo">בחרו ניסוי כדי להתחיל</span>
+    </div>
+    <canvas id="runChart"></canvas>
+  </section>
+
+  <section class="results">
+    <div class="card res fr" id="res-fr">
+      <h3>ניסוי א׳: עם חיכוך</h3>
+      <div class="empty">עוד לא הוקלט</div>
+    </div>
+    <div class="card res nf" id="res-nf">
+      <h3>ניסוי ב׳: בלי חיכוך</h3>
+      <div class="empty">עוד לא הוקלט</div>
+    </div>
+  </section>
+
+  <section class="card" id="compareCard" hidden>
+    <h2>השוואה בין הניסויים</h2>
+    <div class="legend">
+      <span><i style="background:var(--fr)"></i>עם חיכוך</span>
+      <span><i style="background:var(--nf)"></i>בלי חיכוך</span>
+      <span><i style="background:repeating-linear-gradient(90deg,#999 0 4px,transparent 4px 7px)"></i>סף "רעידה"</span>
+    </div>
+    <canvas id="compareChart"></canvas>
+    <div class="bars">
+      <div class="bargroup"><h4>תאוצה מרבית (m/s²)</h4><div id="barsPeak"></div></div>
+      <div class="bargroup"><h4>מספר טלטולים</h4><div id="barsJolts"></div></div>
+    </div>
+    <div class="conclusion" id="conclusion"></div>
+    <ol class="questions">
+      <li>מה היה ההבדל בתנועת הבלוק בין שני המצבים? באיזה מצב נמדדה תאוצה גדולה יותר?</li>
+      <li>באיזה מצב המים במשורה הטלטלו חזק יותר? האם זה מתאים לגרף?</li>
+      <li>כיצד החיכוך קשור להיווצרות רעידת אדמה? (היעזרו במילים: מתח, אנרגיה אלסטית, החלקה פתאומית)</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>⚙️ הגדרות למורה</summary>
+      <div class="row">
+        <label for="thr">סף "טלטול":</label>
+        <input type="range" id="thr" min="0.3" max="4" step="0.1" value="1.2">
+        <b id="thrVal" style="direction:ltr">1.2 m/s²</b>
+      </div>
+      <div class="row">
+        <label for="dur">משך הקלטה מרבי:</label>
+        <input type="range" id="dur" min="5" max="40" step="1" value="15">
+        <b id="durVal">15 שנ׳</b>
+      </div>
+      <div class="row">
+        <button class="ghost" id="calBtn">כיול מחדש</button>
+        <button class="ghost" id="csvBtn">הורדת נתונים (CSV)</button>
+        <button class="ghost" id="clearBtn">ניקוי תוצאות</button>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const MODES = {
+    fr: { name: 'עם חיכוך', color: '#e8590c' },
+    nf: { name: 'בלי חיכוך', color: '#1c7ed6' }
+  };
+
+  // ---------- state ----------
+  const LIVE_WINDOW = 10;           // seconds shown in live chart
+  let live = [];                    // {t (s), m, x}
+  let bias = {x:0, y:0, z:0};
+  let grav = null;                  // for high-pass fallback
+  let calibrating = null;           // {until, sum, n}
+  let rec = null;                   // {mode, t0, samples, countdownUntil}
+  let results = { fr: null, nf: null };
+  let lastRun = null;               // {mode, samples} of the most recent recording
+  let threshold = 1.2;
+  let maxDur = 15;
+  let demo = false;
+  let gotSensor = false;
+  let lastX = 0;
+  const now = () => performance.now() / 1000;
+
+  // ---------- sensor ----------
+  function onMotion(e) {
+    let x, y, z;
+    const a = e.acceleration;
+    if (a && a.x != null) { x = a.x; y = a.y; z = a.z; }
+    else {
+      const g = e.accelerationIncludingGravity;
+      if (!g || g.x == null) return;
+      if (!grav) grav = {x:g.x, y:g.y, z:g.z};
+      const k = 0.92;
+      grav.x = k*grav.x + (1-k)*g.x; grav.y = k*grav.y + (1-k)*g.y; grav.z = k*grav.z + (1-k)*g.z;
+      x = g.x - grav.x; y = g.y - grav.y; z = g.z - grav.z;
+    }
+    gotSensor = true;
+    ingest(x, y, z);
+  }
+
+  function ingest(x, y, z) {
+    const t = now();
+    if (calibrating) {
+      calibrating.sum.x += x; calibrating.sum.y += y; calibrating.sum.z += z; calibrating.n++;
+      if (t >= calibrating.until) {
+        const n = Math.max(1, calibrating.n);
+        bias = { x: calibrating.sum.x/n, y: calibrating.sum.y/n, z: calibrating.sum.z/n };
+        calibrating = null;
+        setStatus('הכיול הסתיים ✓ אפשר להתחיל ניסוי.');
+      }
+    }
+    x -= bias.x; y -= bias.y; z -= bias.z;
+    const m = Math.hypot(x, y, z);
+    lastX = x;
+    live.push({ t, m });
+    while (live.length && live[0].t < t - LIVE_WINDOW) live.shift();
+
+    if (rec && t >= rec.countdownUntil) {
+      if (!rec.t0) rec.t0 = t;
+      rec.samples.push({ t: t - rec.t0, m });
+      if (t - rec.t0 >= maxDur) stopRecording(false);
+    }
+  }
+
+  function calibrate() {
+    calibrating = { until: now() + 1.5, sum: {x:0,y:0,z:0}, n: 0 };
+    bias = {x:0,y:0,z:0};
+    setStatus('מכיילים… אל תזיזו את הטאבלט');
+  }
+
+  // ---------- demo (simulated stick-slip) ----------
+  let demoTimer = null, nextSlip = 0, slips = [];
+  function startDemo() {
+    demo = true; document.body.classList.add('demo');
+    let last = now();
+    demoTimer = setInterval(() => {
+      const t = now();
+      const mode = rec && t >= rec.countdownUntil ? rec.mode : null;
+      let x = (Math.random()-.5)*0.08, y = (Math.random()-.5)*0.08, z = (Math.random()-.5)*0.08;
+      if (mode === 'fr') {
+        if (t >= nextSlip) { slips.push({ t, A: 2.5 + Math.random()*4 }); nextSlip = t + 0.6 + Math.random()*0.9; }
+      } else if (mode === 'nf') {
+        x += 0.35*Math.sin(2*Math.PI*1.3*t) + (Math.random()-.5)*0.25;
+        y += (Math.random()-.5)*0.15;
+      } else nextSlip = t + 0.8;
+      slips = slips.filter(s => t - s.t < 0.6);
+      for (const s of slips) {
+        const d = t - s.t;
+        const v = s.A * Math.exp(-d/0.09) * Math.sin(2*Math.PI*16*d);
+        x += v; y += 0.35*v*Math.cos(2*Math.PI*9*d);
+      }
+      last = t;
+      ingest(x, y, z);
+    }, 16);
+  }
+
+  // ---------- start ----------
+  async function start(useDemo) {
+    $('#startMsg').hidden = true;
+    if (useDemo) {
+      startDemo();
+    } else {
+      if (!window.isSecureContext) {
+        showStartError('החיישן עובד רק כשהדף נפתח בכתובת מאובטחת (https://). פתחו את האפליקציה מהקישור המאובטח.');
+        return;
+      }
+      if (typeof DeviceMotionEvent === 'undefined') {
+        showStartError('הדפדפן הזה לא תומך בחיישן תנועה.');
+        return;
+      }
+      try {
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+          const r = await DeviceMotionEvent.requestPermission();
+          if (r !== 'granted') { showStartError('לא ניתנה הרשאה לחיישן התנועה. לחצו שוב ובחרו "אפשר".'); return; }
+        }
+      } catch (err) { showStartError('לא ניתן לבקש הרשאה לחיישן: ' + err.message); return; }
+      window.addEventListener('devicemotion', onMotion);
+      setTimeout(() => {
+        if (!gotSensor && !demo) {
+          window.removeEventListener('devicemotion', onMotion);
+          $('#app').hidden = true; $('#startScreen').hidden = false;
+          showStartError('לא התקבלו נתונים מחיישן התנועה. במחשב אין חיישן, נסו בטאבלט או בטלפון, או השתמשו במצב הדגמה.');
+        }
+      }, 2000);
+    }
+    $('#startScreen').hidden = true;
+    $('#app').hidden = false;
+    requestWakeLock();
+    calibrate();
+    resizeCanvases();
+    requestAnimationFrame(frame);
+  }
+  function showStartError(msg) { const el = $('#startMsg'); el.textContent = msg; el.hidden = false; }
+
+  let wakeLock = null;
+  async function requestWakeLock() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('#app').hidden) requestWakeLock(); });
+
+  $('#startBtn').onclick = () => start(false);
+  $('#demoBtn').onclick = () => start(true);
+
+  // ---------- recording ----------
+  document.querySelectorAll('.rec').forEach(b => b.onclick = () => startRecording(b.dataset.mode));
+
+  function startRecording(mode) {
+    if (calibrating) return;
+    rec = { mode, t0: 0, samples: [], countdownUntil: now() + 3 };
+    document.querySelectorAll('.rec').forEach(b => b.disabled = true);
+    const banner = $('#recBanner');
+    banner.className = mode; banner.hidden = false;
+    renderBanner();
+  }
+
+  function renderBanner() {
+    if (!rec) return;
+    const banner = $('#recBanner');
+    const t = now();
+    if (t < rec.countdownUntil) {
+      const c = Math.ceil(rec.countdownUntil - t);
+      banner.innerHTML = `<span>ידיים מהטאבלט! מתחילים בעוד <span class="countdown">${c}</span></span><button id="stopBtn">ביטול</button>`;
+    } else {
+      const el = rec.t0 ? (t - rec.t0) : 0;
+      banner.innerHTML = `<span><span class="dot"></span>מקליט: ${MODES[rec.mode].name} · ${el.toFixed(1)} / ${maxDur} שנ׳ · משכו את הקפיץ!</span><button id="stopBtn">עצור</button>`;
+    }
+    $('#stopBtn').onclick = () => stopRecording(true);
+  }
+
+  function stopRecording(byTap) {
+    if (!rec) return;
+    const r = rec; rec = null;
+    $('#recBanner').hidden = true;
+    document.querySelectorAll('.rec').forEach(b => b.disabled = false);
+    let s = r.samples;
+    // drop the last 0.4 s so the tap on "stop" doesn't count as a quake
+    if (byTap && s.length) { const end = s[s.length-1].t - 0.4; s = s.filter(p => p.t <= end); }
+    if (s.length < 10) { setStatus('ההקלטה הייתה קצרה מדי, נסו שוב.'); return; }
+    lastRun = { mode: r.mode, samples: s };
+    results[r.mode] = { samples: s };
+    computeStats(r.mode);
+    renderResults();
+    setStatus(`ההקלטה "${MODES[r.mode].name}" נשמרה ✓`);
+  }
+
+  function computeStats(mode) {
+    const R = results[mode]; if (!R) return;
+    const s = R.samples;
+    let peak = 0, sumSq = 0, jolts = 0, lastJolt = -1, above = false;
+    for (const p of s) {
+      if (p.m > peak) peak = p.m;
+      sumSq += p.m*p.m;
+      if (p.m >= threshold && !above && p.t - lastJolt > 0.25) { jolts++; lastJolt = p.t; }
+      above = p.m >= threshold * 0.6 ? (above || p.m >= threshold) : false;
+    }
+    R.peak = peak; R.rms = Math.sqrt(sumSq / s.length); R.jolts = jolts;
+    R.dur = s[s.length-1].t;
+  }
+
+  // ---------- results rendering ----------
+  function renderResults() {
+    for (const mode of ['fr','nf']) {
+      const card = $('#res-' + mode);
+      const R = results[mode];
+      const h = `<h3>${mode === 'fr' ? 'ניסוי א׳: עם חיכוך' : 'ניסוי ב׳: בלי חיכוך'}</h3>`;
+      if (!R) { card.innerHTML = h + '<div class="empty">עוד לא הוקלט</div>'; continue; }
+      card.innerHTML = h + `<canvas id="mini-${mode}"></canvas>
+        <div class="stats">
+          <div class="stat"><b>${R.peak.toFixed(2)}</b><span>תאוצה מרבית<br>m/s²</span></div>
+          <div class="stat"><b>${R.rms.toFixed(2)}</b><span>תאוצה ממוצעת<br>m/s²</span></div>
+          <div class="stat"><b>${R.jolts}</b><span>טלטולים<br>(מעל הסף)</span></div>
+        </div>`;
+      const cv = $('#mini-' + mode); fitCanvas(cv);
+      drawChart(cv, [{ data: R.samples, color: MODES[mode].color }], { tMin: 0, tMax: Math.max(R.dur, 1), yMax: niceMax(R.peak), small: true });
+    }
+    renderCompare();
+  }
+
+  function renderCompare() {
+    const F = results.fr, N = results.nf;
+    const card = $('#compareCard');
+    if (!F && !N) { card.hidden = true; return; }
+    card.hidden = false;
+    const cv = $('#compareChart'); fitCanvas(cv);
+    const series = [];
+    if (F) series.push({ data: F.samples, color: MODES.fr.color });
+    if (N) series.push({ data: N.samples, color: MODES.nf.color });
+    const tMax = Math.max(F ? F.dur : 0, N ? N.dur : 0, 1);
+    const yMax = niceMax(Math.max(F ? F.peak : 0, N ? N.peak : 0));
+    drawChart(cv, series, { tMin: 0, tMax, yMax });
+
+    const peakMax = Math.max(F ? F.peak : 0, N ? N.peak : 0, 0.01);
+    const joltMax = Math.max(F ? F.jolts : 0, N ? N.jolts : 0, 1);
+    const bar = (label, v, max, color, fmt) =>
+      `<div class="hbar"><span style="min-width:78px">${label}</span><div class="track"><div class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${color}"></div></div><span class="v">${fmt(v)}</span></div>`;
+    $('#barsPeak').innerHTML =
+      (F ? bar('עם חיכוך', F.peak, peakMax, MODES.fr.color, v => v.toFixed(2)) : '') +
+      (N ? bar('בלי חיכוך', N.peak, peakMax, MODES.nf.color, v => v.toFixed(2)) : '');
+    $('#barsJolts').innerHTML =
+      (F ? bar('עם חיכוך', F.jolts, joltMax, MODES.fr.color, v => v) : '') +
+      (N ? bar('בלי חיכוך', N.jolts, joltMax, MODES.nf.color, v => v) : '');
+
+    let txt;
+    if (F && N) {
+      if (F.peak > N.peak * 1.15) {
+        const ratio = F.peak / Math.max(N.peak, 0.01);
+        txt = `עם חיכוך נמדדה תאוצה מרבית גדולה פי ${ratio.toFixed(1)} מאשר בלי חיכוך. הבלוק נתקע, המתח בקפיץ הצטבר, ואז הוא החליק בבת אחת: זו "רעידת האדמה" שלנו.`;
+      } else if (N.peak > F.peak * 1.15) {
+        txt = 'הפעם דווקא בלי חיכוך נמדדה תאוצה גדולה יותר. אולי המשיכה לא הייתה אחידה, או שמישהו נגע בשולחן? נסו לחזור על הניסוי ולמשוך לאט וברציפות.';
+      } else {
+        txt = 'התאוצות בשני הניסויים דומות. נסו למשוך את הקפיץ לאט יותר ובאופן רציף, וודאו שניירות השיוף במגע בניסוי א׳.';
+      }
+    } else {
+      txt = F ? 'עכשיו הקליטו את ניסוי ב׳ (בלי חיכוך) כדי להשוות.' : 'עכשיו הקליטו את ניסוי א׳ (עם חיכוך) כדי להשוות.';
+    }
+    $('#conclusion').textContent = txt;
+  }
+
+  // ---------- charts ----------
+  function fitCanvas(cv) {
+    const dpr = window.devicePixelRatio || 1;
+    const r = cv.getBoundingClientRect();
+    cv.width = Math.max(1, Math.round(r.width * dpr));
+    cv.height = Math.max(1, Math.round(r.height * dpr));
+  }
+  function niceMax(v) {
+    const t = Math.max(v * 1.15, threshold * 1.3, 1);
+    const steps = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50];
+    return steps.find(s => s >= t) || Math.ceil(t / 10) * 10;
+  }
+  function drawChart(cv, series, o) {
+    const ctx = cv.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const padL = 38*dpr, padR = 8*dpr, padT = 8*dpr, padB = (o.small ? 18 : 24)*dpr;
+    const pw = W - padL - padR, ph = H - padT - padB;
+    const X = t => padL + (t - o.tMin) / (o.tMax - o.tMin) * pw;
+    const Y = v => padT + ph - Math.min(v, o.yMax) / o.yMax * ph;
+    ctx.font = `${(o.small ? 10 : 12)*dpr}px Rubik, Arial, sans-serif`;
+    ctx.fillStyle = '#6b7385'; ctx.strokeStyle = '#ebe8e1'; ctx.lineWidth = 1*dpr;
+
+    // y grid
+    const ySteps = o.small ? 2 : 4;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i <= ySteps; i++) {
+      const v = o.yMax * i / ySteps, y = Y(v);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+      ctx.fillText(v % 1 ? v.toFixed(1) : v, padL - 6*dpr, y);
+    }
+    // x labels
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const span = o.tMax - o.tMin;
+    const step = span > 20 ? 5 : span > 8 ? 2 : 1;
+    for (let t = Math.ceil(o.tMin/step)*step; t <= o.tMax + 1e-6; t += step) {
+      const label = o.live ? (t - o.tMax).toFixed(0) : t.toFixed(0);
+      ctx.fillText(label + (o.small ? '' : 's'), X(t), padT + ph + 5*dpr);
+    }
+    // threshold
+    ctx.save(); ctx.setLineDash([5*dpr, 4*dpr]); ctx.strokeStyle = '#9a9a9a';
+    ctx.beginPath(); ctx.moveTo(padL, Y(threshold)); ctx.lineTo(W - padR, Y(threshold)); ctx.stroke(); ctx.restore();
+
+    for (const s of series) {
+      if (!s.data.length) continue;
+      ctx.beginPath(); ctx.strokeStyle = s.color; ctx.lineWidth = (o.small ? 1.5 : 2)*dpr; ctx.lineJoin = 'round';
+      let first = true;
+      for (const p of s.data) {
+        if (p.t < o.tMin) continue;
+        const x = X(p.t), y = Y(p.m);
+        first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false;
+      }
+      ctx.stroke();
+      if (s.fill) {
+        ctx.lineTo(X(s.data[s.data.length-1].t), Y(0)); ctx.lineTo(X(Math.max(s.data[0].t, o.tMin)), Y(0)); ctx.closePath();
+        ctx.fillStyle = s.fill; ctx.fill();
+      }
+    }
+    if (o.cursor != null) {
+      ctx.strokeStyle = '#1f2a44'; ctx.lineWidth = 1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(X(o.cursor), padT); ctx.lineTo(X(o.cursor), padT + ph); ctx.stroke();
+    }
+    if (o.peak && o.peak.m > 0) {
+      const px = X(o.peak.t), py = Y(o.peak.m);
+      ctx.fillStyle = o.peak.color;
+      ctx.beginPath(); ctx.arc(px, py, 5*dpr, 0, 2*Math.PI); ctx.fill();
+      ctx.fillStyle = '#1f2a44'; ctx.textBaseline = 'bottom';
+      ctx.textAlign = px > W - 70*dpr ? 'right' : px < padL + 50*dpr ? 'left' : 'center';
+      ctx.font = `600 ${12*dpr}px Rubik, Arial, sans-serif`;
+      ctx.fillText('שיא ' + o.peak.m.toFixed(2), px, Math.max(py - 7*dpr, 14*dpr));
+    }
+  }
+
+  // ---------- beaker physics ----------
+  let theta = 0, omega = 0, ripple = 0, shake = 0, lastFrame = now();
+  function updateBeaker(dt, ax, m) {
+    const w0 = 2*Math.PI*1.4, zeta = 0.06, K = 0.05;
+    const alpha = -w0*w0*theta - 2*zeta*w0*omega - K*w0*w0*ax*0.25;
+    omega += alpha*dt; theta += omega*dt;
+    theta = Math.max(-0.45, Math.min(0.45, theta));
+    ripple = Math.max(ripple*Math.exp(-dt*2.5), Math.min(m*2.2, 14));
+    shake = ax * 0.9;
+    const t = now();
+    const level = 80, half = 50, cx = 70;
+    const dl = Math.tan(theta)*half;
+    const r1 = ripple*Math.sin(t*22), r2 = ripple*Math.cos(t*17);
+    const d = `M 10 ${level + dl} C ${cx-25} ${level + dl*0.5 + r1}, ${cx+25} ${level - dl*0.5 + r2}, 130 ${level - dl} L 130 160 L 10 160 Z`;
+    $('#water').setAttribute('d', d);
+    $('#beakerG').setAttribute('transform', `translate(${Math.max(-6, Math.min(6, shake)).toFixed(2)},0)`);
+  }
+
+  // ---------- main loop ----------
+  const levelEl = $('#nowLevel'), valEl = $('#nowVal'), barEl = $('#nowBar');
+  function frame() {
+    const t = now();
+    const dt = Math.min(0.05, t - lastFrame); lastFrame = t;
+    // displayed value: max over the last 0.3 s so peaks are readable
+    let disp = 0;
+    for (let i = live.length - 1; i >= 0 && live[i].t > t - 0.3; i--) disp = Math.max(disp, live[i].m);
+    valEl.textContent = disp.toFixed(2);
+    const frac = Math.min(1, disp / 8);
+    barEl.style.width = (frac*100).toFixed(1) + '%';
+    let lvl, col, bg;
+    if (disp < threshold*0.4) { lvl = 'שקט'; col = '#2f9e44'; bg = '#eef6ee'; }
+    else if (disp < threshold) { lvl = 'רעד קל'; col = '#5c940d'; bg = '#f4fce3'; }
+    else if (disp < threshold*3) { lvl = 'טלטול!'; col = '#e67700'; bg = '#fff4e6'; }
+    else { lvl = 'רעידה חזקה!'; col = '#e03131'; bg = '#fff0f0'; }
+    levelEl.textContent = lvl; levelEl.style.color = col; levelEl.style.background = bg;
+    barEl.style.background = col;
+
+    updateBeaker(dt, lastX, disp);
+
+    const cv = $('#liveChart');
+    let peak = 0; for (const p of live) if (p.m > peak) peak = p.m;
+    const color = rec && t >= rec.countdownUntil ? MODES[rec.mode].color : '#1f2a44';
+    drawChart(cv, [{ data: live, color, fill: color + '22' }], { tMin: t - LIVE_WINDOW, tMax: t, yMax: niceMax(peak), live: true });
+
+    drawRun(t);
+    if (rec) renderBanner();
+    requestAnimationFrame(frame);
+  }
+
+  // full-run chart: fixed time axis 0..maxDur that fills in while recording
+  function drawRun(t) {
+    const cv = $('#runChart');
+    let mode, data, cursor = null, info;
+    if (rec) {
+      mode = rec.mode; data = rec.samples;
+      if (t < rec.countdownUntil) { info = `${MODES[mode].name} · מתחילים בעוד ${Math.ceil(rec.countdownUntil - t)}…`; }
+      else { cursor = rec.t0 ? t - rec.t0 : 0; info = `${MODES[mode].name} · ${cursor.toFixed(1)} שנ׳`; }
+    } else if (lastRun) {
+      mode = lastRun.mode; data = lastRun.samples;
+      info = `הקלטה אחרונה: ${MODES[mode].name}`;
+    } else {
+      drawChart(cv, [], { tMin: 0, tMax: maxDur, yMax: niceMax(0) });
+      return;
+    }
+    let peak = 0, peakT = 0;
+    for (const p of data) if (p.m > peak) { peak = p.m; peakT = p.t; }
+    if (data.length) info += ` · שיא ${peak.toFixed(2)} m/s²`;
+    const tMax = rec ? maxDur : Math.max(data.length ? data[data.length-1].t : 1, 1);
+    const color = MODES[mode].color;
+    drawChart(cv, [{ data, color, fill: color + '22' }], {
+      tMin: 0, tMax, yMax: niceMax(peak), cursor, peak: data.length ? { t: peakT, m: peak, color } : null
+    });
+    const el = $('#runInfo'); if (el.textContent !== info) el.textContent = info;
+  }
+
+  // ---------- misc UI ----------
+  function setStatus(s) { $('#status').textContent = s; }
+  function resizeCanvases() {
+    fitCanvas($('#liveChart'));
+    fitCanvas($('#runChart'));
+    if (results.fr || results.nf) renderResults();
+  }
+  window.addEventListener('resize', resizeCanvases);
+
+  $('#thr').oninput = e => {
+    threshold = +e.target.value;
+    $('#thrVal').textContent = threshold.toFixed(1) + ' m/s²';
+    computeStats('fr'); computeStats('nf'); renderResults();
+  };
+  $('#dur').oninput = e => { maxDur = +e.target.value; $('#durVal').textContent = maxDur + ' שנ׳'; };
+  $('#calBtn').onclick = calibrate;
+  $('#clearBtn').onclick = () => { if (confirm('למחוק את התוצאות?')) { results = { fr: null, nf: null }; lastRun = null; renderResults(); } };
+  $('#csvBtn').onclick = () => {
+    const rows = ['experiment,time_s,acceleration_m_s2'];
+    for (const mode of ['fr','nf']) {
+      const R = results[mode]; if (!R) continue;
+      const label = mode === 'fr' ? 'with_friction' : 'no_friction';
+      for (const p of R.samples) rows.push(`${label},${p.t.toFixed(3)},${p.m.toFixed(4)}`);
+    }
+    if (rows.length === 1) { alert('אין עדיין נתונים להורדה.'); return; }
+    const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'earthquake-experiment.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+})();
+</script>
+</body>
+</html>
